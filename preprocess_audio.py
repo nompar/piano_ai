@@ -3,6 +3,9 @@
 # FUNCTIONS TO PREPROCESS DATA FOR MODELING
 # ==========================================
 
+# Import global variables
+from params import *
+
 # Imports for data loading, cleaning, and spectrogram generation functions
 import numpy as np  # Numerical operations, arrays
 import librosa      # Audio loading and feature extraction
@@ -15,20 +18,6 @@ import numpy as np  # (Redundant import, but harmless)
 # Import prettymidi to read notes and instruments
 import pretty_midi
 
-# =========================
-# Global Variables
-# =========================
-
-SR = 22050  # Sample rate: audio will be loaded at 22,050 samples per second
-FPS = 100   # Frames per second for spectrogram time resolution
-HOP_LENGTH = SR // FPS  # Number of samples between successive frames (controls time resolution)
-N_FFT = 2048    # Number of samples per FFT window (controls frequency resolution)
-N_MELS = 128    # Number of mel bands (vertical resolution of mel-spectrogram)
-
-# Piano range variables
-PITCH_MIN = 21    # A0
-PITCH_MAX = 108   # C8
-N_PITCHES = PITCH_MAX - PITCH_MIN + 1
 
 # ===================================
 # Feature Extraction from Audio File
@@ -107,6 +96,7 @@ def extract_and_save_mel_features(audio_dir, out_dir):
     # Find all audio files in the input directory
     for ext in exts:
         audio_files.extend(glob.glob(os.path.join(audio_dir, ext)))
+
     audio_files = sorted(audio_files)
 
     print(f"Found {len(audio_files)} audio files")

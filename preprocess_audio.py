@@ -12,6 +12,9 @@ import os           # File and directory operations
 import glob         # Pattern matching for file names
 import numpy as np  # (Redundant import, but harmless)
 
+# Import prettymidi to read notes and instruments
+import pretty_midi
+
 # =========================
 # Global Variables
 # =========================
@@ -22,6 +25,10 @@ HOP_LENGTH = SR // FPS  # Number of samples between successive frames (controls 
 N_FFT = 2048    # Number of samples per FFT window (controls frequency resolution)
 N_MELS = 128    # Number of mel bands (vertical resolution of mel-spectrogram)
 
+# Piano range variables
+PITCH_MIN = 21    # A0
+PITCH_MAX = 108   # C8
+N_PITCHES = PITCH_MAX - PITCH_MIN + 1
 
 # ===================================
 # Feature Extraction from Audio File
@@ -122,3 +129,63 @@ def extract_and_save_mel_features(audio_dir, out_dir):
             n_mels=N_MELS,
         )
     print("Done ✅")
+
+
+# ==============================
+# MIDI to target extraction
+# ==============================
+
+def midi_to_targets(midi_path, n_frames, fps=FPS, pitch_min=PITCH_MIN, pitch_max=PITCH_MAX):
+    """
+    Converts a MIDI file into training target matrices for each time frame:
+    - onset: when a note starts
+    - offset: when a note ends
+    - active: when a note is held down
+    - velocity: how hard the note is played (normalized)
+    - pedal: sustain pedal state
+
+    Args:
+        midi_path (str): Path to the MIDI file.
+        n_frames (int): Number of time frames to align with audio features.
+        fps (int): Frames per second (time resolution).
+        pitch_min (int): Lowest piano key to consider.
+        pitch_max (int): Highest piano key to consider.
+
+    Returns:
+        onset, offset, active, velocity, pedal: Each is a numpy array of shape (n_frames, n_pitches)
+    """
+    n_pitches = pitch_max - pitch_min + 1  # Total number of piano notes
+    onset    = np.zeros((n_frames, n_pitches), np.float32)  # Matrix for note starts
+    offset   = np.zeros((n_frames, n_pitches), np.float32)  # Matrix for note ends
+    active   = np.zeros((n_frames, n_pitches), np.float32)  # Matrix for notes being held
+    velocity = np.zeros((n_frames, n_pitches), np.float32)  # Matrix for note velocities
+    pedal    = np.zeros((n_frames, 1), np.float32)          # Matrix for sustain pedal
+
+    pm = pretty_midi.PrettyMIDI(midi_path)  # Load the MIDI file
+
+    for inst in pm.instruments:             # Go through each instrument
+        if inst.is_drum: continue           # Skip drums (not piano)
+        for note in inst.notes:             # Go through each note
+            if not (pitch_min <= note.pitch <= pitch_max): continue  # Skip notes outside piano range
+            p = note.pitch - pitch_min      # Convert MIDI pitch to matrix index
+            f_on  = int(round(note.start * fps))  # Frame when note starts
+            f_off = int(round(note.end   * fps))  # Frame when note ends
+            f_on  = max(0, min(n_frames-1, f_on))  # Make sure frame is in bounds
+            f_off = max(0, min(n_frames-1, f_off)) # Make sure frame is in bounds
+            onset[f_on, p] = 1.0            # Mark note start
+            offset[f_off, p] = 1.0          # Mark note end
+            active[f_on:f_off+1, p] = 1.0   # Mark note as active between start and end
+            velocity[f_on, p] = note.velocity / 127.0  # Normalize velocity (0-1)
+
+    # Handle sustain pedal (MIDI control change 64)
+    cc64 = [(cc.time, cc.value) for inst in pm.instruments for cc in inst.control_changes if cc.number == 64]
+    cc64.sort()
+    for f in range(n_frames):              # For each time frame
+        t = f / fps                        # Convert frame to time in seconds
+        state = 0.0                        # Default pedal state is off
+        for ct, cv in cc64:                # Go through pedal events
+            if ct <= t: state = 1.0 if cv >= 64 else 0.0  # Pedal pressed if value >= 64
+            else: break
+        pedal[f, 0] = state                # Set pedal state for this frame
+
+    return onset, offset, active, velocity, pedal  # Return all target matrices

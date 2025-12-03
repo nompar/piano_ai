@@ -5,7 +5,6 @@ from preprocess_audio import extract_and_save_mel_features
 from preprocess_audio import midi_to_targets
 import numpy as np
 import os
-import glob
 
 
 # =======================
@@ -18,15 +17,16 @@ if __name__ == "__main__":
     # Processes audio file to npz
 
     # Where we get audio from
-    audio_dir = "/Users/jonade/code/nompar/piano_ai/raw_data/2017"  # Folder with your 2017 audio files
+    audio_dir = "./raw_data/2017"  # Folder with your 2017 audio files
 
     # Where we save it to
-    out_dir = "/Users/jonade/code/nompar/piano_ai/2017_npz"  # Output folder for processed features
+    out_dir = "./2017_npz"  # Output folder for processed features
     extract_and_save_mel_features(audio_dir, out_dir)
 
     # Process one MIDI file to targets
     midi_dir = "./raw_data/2017"  # Path to your MIDI file
     out_dir = "./2017_midi_targets_npz"
+    os.makedirs(out_dir, exist_ok=True)  # Ensure output folder exists
 
     # Get a list of midi names from the raw data directory
     midi_files = sorted(os.listdir(midi_dir))

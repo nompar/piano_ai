@@ -51,3 +51,32 @@ if __name__ == "__main__":
             velocity=velocity,
             pedal=pedal
         )
+
+# =======================
+# Loader : construire le tf.data.Dataset
+# =======================
+
+from loader import get_dataset
+
+print("\n=== Construction du dataset TensorFlow ===")
+
+# On réutilise exactement les dossiers de sortie du preprocess
+mel_dir = "./2017_npz"
+labels_dir = "./2017_midi_targets_npz"
+
+dataset = get_dataset(
+    mel_dir=mel_dir,
+    labels_dir=labels_dir,
+    batch_size=1
+)
+
+# Vérification d’un batch
+for mel, targets in dataset:
+    print("\nBatch chargé ✔️")
+    print("mel :", mel.shape)
+    print("onset :", targets["onset"].shape)
+    print("offset :", targets["offset"].shape)
+    print("active :", targets["active"].shape)
+    print("velocity :", targets["velocity"].shape)
+    print("pedal :", targets["pedal"].shape)
+    break

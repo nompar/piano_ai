@@ -1,7 +1,7 @@
 import pretty_midi
 import numpy as np
 
-def transformer(y_binarized, fs=100, output_path='output.mid'):
+def transformer(y_binarized, fs=100, output_path='output.midi'):
     """
     Convertit un y_pred déjà binarisé en fichier MIDI.
 

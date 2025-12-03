@@ -1,52 +1,48 @@
 # Entry point: runs the full pipeline (preprocessing, training, evaluation)
 
-# Import function and its subfunctions from the preprocess_audio.py
+# Import functions from preprocess_audio.py
 from preprocess_audio import extract_and_save_mel_features
 from preprocess_audio import midi_to_targets
 import numpy as np
 import os
-import glob
-
 
 # =======================
 # Preprocessing
 # =======================
 
-# The following will execute when we call main.py in python
 if __name__ == "__main__":
 
-    # Processes audio file to npz
+    # --- AUDIO PREPROCESSING ---
+    # Set input and output directories for audio
+    audio_dir = "./raw_data/2017"      # Folder containing audio files
+    out_dir = "./2017_npz"             # Output folder for processed features
 
-    # Where we get audio from
-    audio_dir = "/Users/jonade/code/nompar/piano_ai/raw_data/2017"  # Folder with your 2017 audio files
-
-    # Where we save it to
-    out_dir = "/Users/jonade/code/nompar/piano_ai/2017_npz"  # Output folder for processed features
+    # Extract mel features and save as .npz files
     extract_and_save_mel_features(audio_dir, out_dir)
 
-    # Process one MIDI file to targets
-    midi_dir = "./raw_data/2017"  # Path to your MIDI file
-    out_dir = "./2017_midi_targets_npz"
+    # --- MIDI PREPROCESSING ---
+    midi_dir = "./raw_data/2017"       # Folder containing MIDI files
+    out_dir = "./2017_midi_targets_npz" # Output folder for MIDI targets
 
-    # Get a list of midi names from the raw data directory
-    midi_files = sorted(os.listdir(midi_dir))
-    for i, name in enumerate(midi_files):
-        if not name.endswith("midi"):
-            midi_files.pop(i)
+    # Ensure output folder exists
+    os.makedirs(out_dir, exist_ok=True)
 
-    print(midi_files)
+    # Get a list of MIDI files (only files ending with 'midi')
+    midi_files = [f for f in sorted(os.listdir(midi_dir)) if f.endswith("midi")]
 
-    # Loop through each midi path and pass it to midi_to_targets
+    print("MIDI files found:", midi_files)
+
+    # Loop through each MIDI file and process
     for midi_path in midi_files:
-        print(f"Processing {midi_path}")  # <-- Add this line
+        print(f"Processing {midi_path}")  # Dummy progress print
         name = os.path.splitext(os.path.basename(midi_path))[0]
 
-        n_frames = 100  # Set this to the number of frames you want (should match your mel features)
+        n_frames = 100  # Dummy value: should match your mel features
 
-        # Get the 5 targets
-        onset, offset, active, velocity, pedal = midi_to_targets(midi_dir + "/" + midi_path, n_frames)
+        # Extract targets from MIDI
+        onset, offset, active, velocity, pedal = midi_to_targets(os.path.join(midi_dir, midi_path), n_frames)
 
-        # Save the targets for later use
+        # Save targets as compressed .npz file
         np.savez_compressed(
             os.path.join(out_dir, f"{name}_targets.npz"),
             onset=onset,
@@ -54,4 +50,33 @@ if __name__ == "__main__":
             active=active,
             velocity=velocity,
             pedal=pedal
-            )
+        )
+
+# =======================
+# Loader : construire le tf.data.Dataset
+# =======================
+
+from loader import get_dataset
+
+print("\n=== Construction du dataset TensorFlow ===")
+
+# On réutilise exactement les dossiers de sortie du preprocess
+mel_dir = "./2017_npz"
+labels_dir = "./2017_midi_targets_npz"
+
+dataset = get_dataset(
+    mel_dir=mel_dir,
+    labels_dir=labels_dir,
+    batch_size=1
+)
+
+# Vérification d’un batch
+for mel, targets in dataset:
+    print("\nBatch chargé ✔️")
+    print("mel :", mel.shape)
+    print("onset :", targets["onset"].shape)
+    print("offset :", targets["offset"].shape)
+    print("active :", targets["active"].shape)
+    print("velocity :", targets["velocity"].shape)
+    print("pedal :", targets["pedal"].shape)
+    break

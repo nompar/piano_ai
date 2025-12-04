@@ -11,4 +11,5 @@ setup(
 from audio, including feature extraction, model training,
 and MIDI output.""",  # A short description of what your package does
     packages=find_packages(),  # Automatically find all folders with __init__.py to include as packages
+    install_requires=requirements,
 )

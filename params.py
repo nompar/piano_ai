@@ -2,6 +2,15 @@
 # Global Variables
 # =========================
 
+# Library import
+import os
+RAW_DATA_DIR = os.environ.get("RAW_DATA_DIR")
+MAESTRO_DIR = os.environ.get("MAESTRO_DIR")
+BUCKET_NAME = os.environ.get("BUCKET_NAME")
+BUCKET_ID = os.environ.get("BUCKET_ID")
+ANNEE = os.environ.get("ANNEE")
+
+
 SR = 22050  # Sample rate: audio will be loaded at 22,050 samples per second
 FPS = 100   # Frames per second for spectrogram time resolution
 HOP_LENGTH = SR // FPS  # Number of samples between successive frames (controls time resolution)

@@ -1,53 +1,47 @@
-# Entry point: runs the full pipeline (preprocessing, training, evaluation)
-
-# Import functions from preprocess_audio.py
-from preprocess_audio import extract_and_save_mel_features
-from preprocess_audio import midi_to_targets
-import numpy as np
+from preprocess_audio import extract_and_save_mel_features, midi_to_targets_chunks
+from loader import get_dataset
 import os
 
-# =======================
-# Preprocessing
-# =======================
+# ----------------------
+# Configuration paths
+# ----------------------
+RAW_AUDIO_DIR = "./raw_data/2017"
+RAW_MIDI_DIR = "./raw_data/2017"
+OUT_DIR = "./2017_npz"
+CHUNK_SIZE = 3000
 
 if __name__ == "__main__":
 
-    # --- AUDIO PREPROCESSING ---
-    # Set input and output directories for audio
-    audio_dir = "./raw_data/2017"      # Folder containing audio files
-    out_dir = "./2017_npz"             # Output folder for processed features
+    # ----------------------
+    # Audio preprocessing
+    # ----------------------
+    extract_and_save_mel_features(RAW_AUDIO_DIR, OUT_DIR, chunk_size=CHUNK_SIZE)
 
-    # Extract mel features and save as .npz files
-    extract_and_save_mel_features(audio_dir, out_dir)
+    # ----------------------
+    # MIDI preprocessing
+    # ----------------------
+    mel_chunks_dir = os.path.join(OUT_DIR, "mel_npz")
+    midi_to_targets_chunks(RAW_MIDI_DIR, mel_chunks_dir, OUT_DIR, chunk_size=CHUNK_SIZE)
 
-    # --- MIDI PREPROCESSING ---
-    midi_dir = "./raw_data/2017"       # Folder containing MIDI files
-    out_dir = "./2017_midi_targets_npz" # Output folder for MIDI targets
+    # ----------------------
+    # TensorFlow dataset
+    # ----------------------
+    from loader import get_dataset
 
-    # Ensure output folder exists
-    os.makedirs(out_dir, exist_ok=True)
+    print("\n=== Constructing TensorFlow dataset ===")
+    dataset = get_dataset(
+        mel_dir=os.path.join(OUT_DIR, "mel_npz"),
+        labels_dir=os.path.join(OUT_DIR, "midi_npz"),
+        batch_size=1
+    )
 
-    # Get a list of MIDI files (only files ending with 'midi')
-    midi_files = [f for f in sorted(os.listdir(midi_dir)) if f.endswith("midi")]
-
-    print("MIDI files found:", midi_files)
-
-    # Loop through each MIDI file and process
-    for midi_path in midi_files:
-        print(f"Processing {midi_path}")  # Dummy progress print
-        name = os.path.splitext(os.path.basename(midi_path))[0]
-
-        n_frames = 100  # Dummy value: should match your mel features
-
-        # Extract targets from MIDI
-        onset, offset, active, velocity, pedal = midi_to_targets(os.path.join(midi_dir, midi_path), n_frames)
-
-        # Save targets as compressed .npz file
-        np.savez_compressed(
-            os.path.join(out_dir, f"{name}_targets.npz"),
-            onset=onset,
-            offset=offset,
-            active=active,
-            velocity=velocity,
-            pedal=pedal
-        )
+    # Vérification d’un batch
+    for mel, targets in dataset:
+        print("\nBatch loaded ✔️")
+        print("mel :", mel.shape)
+        print("onset :", targets["onset"].shape)
+        print("offset :", targets["offset"].shape)
+        print("active :", targets["active"].shape)
+        print("velocity :", targets["velocity"].shape)
+        print("pedal :", targets["pedal"].shape)
+        break

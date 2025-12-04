@@ -1,4 +1,4 @@
-from preprocess_audio import extract_and_save_mel_features, midi_to_targets_chunks
+from piano_ai.preprocess_audio import extract_and_save_mel_features, midi_to_targets_chunks
 from loader import get_dataset
 import os
 

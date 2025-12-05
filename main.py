@@ -1,31 +1,24 @@
-from preprocess_audio import extract_and_save_mel_features, midi_to_targets_chunks
+from piano_ai import extract_and_save_mel_features, midi_to_targets_chunks
 from loader import get_dataset
+from params import *
 import os
-
-# ----------------------
-# Configuration paths
-# ----------------------
-RAW_AUDIO_DIR = "./raw_data/2017"
-RAW_MIDI_DIR = "./raw_data/2017"
-OUT_DIR = "./2017_npz"
-CHUNK_SIZE = 3000
 
 if __name__ == "__main__":
 
-    # ----------------------
-    # Audio preprocessing
-    # ----------------------
+    # Step 1: Audio preprocessing
+    # This function goes through all raw audio files, extracts mel spectrogram features,
+    # splits them into chunks, and saves them for later use in model training.
     extract_and_save_mel_features(RAW_AUDIO_DIR, OUT_DIR, chunk_size=CHUNK_SIZE)
 
-    # ----------------------
-    # MIDI preprocessing
-    # ----------------------
+    # Step 2: MIDI preprocessing
+    # This function processes the MIDI files, matches them to the audio chunks,
+    # and creates training labels (onset, offset, velocity, etc.) for each chunk.
     mel_chunks_dir = os.path.join(OUT_DIR, "mel_npz")
     midi_to_targets_chunks(RAW_MIDI_DIR, mel_chunks_dir, OUT_DIR, chunk_size=CHUNK_SIZE)
 
-    # ----------------------
-    # TensorFlow dataset
-    # ----------------------
+    # Step 3: Build TensorFlow dataset
+    # This loads the processed mel features and MIDI labels into a TensorFlow dataset
+    # so the model can use them for training and evaluation.
     from loader import get_dataset
 
     print("\n=== Constructing TensorFlow dataset ===")
@@ -35,7 +28,9 @@ if __name__ == "__main__":
         batch_size=1
     )
 
-    # Vérification d’un batch
+    # Step 4: Check the dataset
+    # This loop loads one batch from the dataset and prints the shapes of the data
+    # to verify everything is working as expected.
     for mel, targets in dataset:
         print("\nBatch loaded ✔️")
         print("mel :", mel.shape)

@@ -15,20 +15,27 @@ import pretty_midi     # For reading and processing MIDI files
 # ===================================
 
 def audio_to_mel_3d(
-    audio_path, sr=SR, hop_length=HOP_LENGTH, n_fft=N_FFT,
-    n_mels=N_MELS, normalize=True
+    audio_object, # can be a file path (str) or a file-like object (e.g., io.BytesIO)
+    sr=SR,
+    hop_length=HOP_LENGTH,
+    n_fft=N_FFT,
+    n_mels=N_MELS,
+    normalize=True
     ):
-    """Transform the sound signal into a form
+
+    """Transform the sound signal OR bytes-file into a form
     that a machine learning model can understand and use.
     Load audio and convert to mel-spectrogram 3D array (n_mels, T, 1)"""
 
     # Load audio file as a waveform
-    y, sr = librosa.load(audio_path, sr=sr, mono=True)
+    y, sr = librosa.load(audio_object, sr=sr, mono=True)
     # Compute mel-spectrogram from waveform
     S = librosa.feature.melspectrogram(
-        y=y, sr=sr, n_fft=n_fft,
+        y=y, sr=sr,
+        n_fft=n_fft,
         hop_length=hop_length,
-        n_mels=n_mels, power=2.0
+        n_mels=n_mels,
+        power=2.0
         )
     # Convert power spectrogram to decibel units
     S_db = librosa.power_to_db(S, ref=np.max)

@@ -6,6 +6,11 @@ app = FastAPI()
 
 @app.post("/convert")
 async def convert_audio(file: UploadFile = File(...)):
+    """The API receives the uploaded audio file as bytes.
+    The function wraps those bytes in an io.BytesIO object.
+    Passes this io.BytesIO object.
+    The model model processes the audio and returns MIDI bytes.
+    The model returns the MIDI bytes back to the user."""
 
     # Read the uploaded audio file into memory (as bytes)
     audio_bytes = await file.read()
@@ -28,9 +33,3 @@ async def convert_audio(file: UploadFile = File(...)):
 
 
 # How it works:
-
-# The API receives the uploaded audio file as bytes.
-# You wrap those bytes in an io.BytesIO object (which acts like a file in memory).
-# You pass this io.BytesIO object (or the bytes directly, depending on your model) to your model.
-# Your model processes the audio and returns MIDI bytes.
-# You send the MIDI bytes back to the user.

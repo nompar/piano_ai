@@ -47,6 +47,8 @@ OUT_DIR = "./2017_npz"              # Where to save processed data (features/lab
 CHUNK_SIZE = 3000                   # How many frames per chunk when splitting data
 # These are used throughout the pipeline to tell the code where to find input data,
 # where to save outputs, and how to split up the data for processing and training.
+
+POS_WEIGHT = 50
 EPOCHS = 50
 BATCH_SIZE = 4
 

@@ -1,6 +1,7 @@
-from piano_ai import extract_and_save_mel_features, midi_to_targets_chunks, get_dataset
+
+from piano_ai import extract_and_save_mel_features, midi_to_targets_chunks
+from piano_ai.loader import make_datasets
 from piano_ai.params import *
-import os
 
 if __name__ == "__main__":
 
@@ -30,12 +31,26 @@ if __name__ == "__main__":
     # This loads the processed mel features and MIDI labels into a TensorFlow dataset
     # so the model can use them for training and evaluation.
 
-    print("\n=== Constructing TensorFlow dataset ===")
-    dataset = get_dataset(
-        mel_dir=os.path.join(OUT_DIR, "mel_npz"),
-        labels_dir=os.path.join(OUT_DIR, "midi_npz"),
-        batch_size=1
-    )
+    print("\n=== Constructing TensorFlow datasets ===")
+
+    train_ds, val_ds, test_ds = make_datasets(
+        feature_dir=os.path.join(OUT_DIR, "mel_npz"),
+        target_dir=os.path.join(OUT_DIR, "midi_npz"),
+        batch_size=1,
+        val_ratio=0.1,
+        test_ratio=0.1,   # mets 0.0 si tu ne veux pas de test split
+        )
+
+    print(f"Train batches: {len(list(train_ds))}")
+    print(f"Val batches:   {len(list(val_ds))}")
+
+    if test_ds is not None:
+        print(f"Test batches:  {len(list(test_ds))}")
+    else:
+        print("No test dataset (test_ratio=0)")
+
+
+
     #############################
     # Step 4: Check the dataset
     #############################

@@ -2,7 +2,7 @@
 # FUNCTIONS TO PREPROCESS DATA FOR MODELING
 # ==========================================
 
-from params import *  # Import global parameters for audio/MIDI processing
+from piano_ai.params import *  # Import global parameters for audio/MIDI processing
 
 import numpy as np     # For numerical operations and arrays
 import librosa         # For audio loading and feature extraction
@@ -177,7 +177,7 @@ def midi_to_targets_chunks(
     what notes are being played (and how) at each time frame,
     so a machine learning model can learn from it.
     Save in out_dir/midi_npz/"""
-    
+
     # Create output directory for MIDI targets
     midi_out_dir = os.path.join(out_dir, "midi_npz")
     os.makedirs(midi_out_dir, exist_ok=True)

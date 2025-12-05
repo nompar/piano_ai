@@ -1,6 +1,5 @@
-from piano_ai import extract_and_save_mel_features, midi_to_targets_chunks
-from loader import get_dataset
-from params import *
+from piano_ai import extract_and_save_mel_features, midi_to_targets_chunks, get_dataset
+from piano_ai.params import *
 import os
 
 if __name__ == "__main__":

@@ -21,3 +21,11 @@ N_MELS = 128    # Number of mel bands (vertical resolution of mel-spectrogram)
 PITCH_MIN = 21    # A0
 PITCH_MAX = 108   # C8
 N_PITCHES = PITCH_MAX - PITCH_MIN + 1
+
+# ----------------------
+# Configuration paths
+# ----------------------
+RAW_AUDIO_DIR = "./raw_data/2017"
+RAW_MIDI_DIR = "./raw_data/2017"
+OUT_DIR = "./2017_npz"
+CHUNK_SIZE = 3000

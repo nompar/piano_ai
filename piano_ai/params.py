@@ -4,6 +4,8 @@
 
 # Library import
 import os
+from google.cloud import storage
+
 
 # These variables allow us to optionally set important paths and settings using environment variables.
 # This is useful if we want to run the code on different machines or cloud environments without changing the code.
@@ -12,6 +14,7 @@ MAESTRO_DIR = os.environ.get("MAESTRO_DIR")        # Path to MAESTRO dataset (if
 BUCKET_NAME = os.environ.get("BUCKET_NAME")        # Name of the cloud storage bucket (for cloud workflows)
 BUCKET_ID = os.environ.get("BUCKET_ID")            # ID of the cloud storage bucket (for cloud workflows)
 ANNEE = os.environ.get("ANNEE")                    # Year or version identifier (if needed)
+READ_MODE = os.environ.get("READ_MODE")
 
 # Audio processing parameters:
 SR = 22050  # Sample rate: audio will be loaded at 22,050 samples per second
@@ -46,4 +49,14 @@ CHUNK_SIZE = 3000                   # How many frames per chunk when splitting d
 # where to save outputs, and how to split up the data for processing and training.
 
 POS_WEIGHT = 50
+EPOCHS = 50
 BATCH_SIZE = 4
+
+if READ_MODE == 'local':
+    FEATURE_DIR = "/Users/hadriendecaumont/Downloads/all_years_npz_2/mel_npz"
+    TARGET_DIR  = "/Users/hadriendecaumont/Downloads/all_years_npz_2/midi_npz"
+elif READ_MODE == 'gcp':
+    client = storage.Client()
+    bucket = client.bucket(BUCKET_ID)
+    FEATURE_DIR = bucket.blob('all_years_npz/mel_npz')
+    TARGET_DIR = bucket.blob('all_years_npz/midi_npz')

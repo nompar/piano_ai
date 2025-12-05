@@ -51,12 +51,5 @@ CHUNK_SIZE = 3000                   # How many frames per chunk when splitting d
 POS_WEIGHT = 50
 EPOCHS = 50
 BATCH_SIZE = 4
-
-if READ_MODE == 'local':
-    FEATURE_DIR = "/Users/hadriendecaumont/Downloads/all_years_npz_2/mel_npz"
-    TARGET_DIR  = "/Users/hadriendecaumont/Downloads/all_years_npz_2/midi_npz"
-elif READ_MODE == 'gcp':
-    client = storage.Client()
-    bucket = client.bucket(BUCKET_ID)
-    FEATURE_DIR = bucket.blob('all_years_npz/mel_npz')
-    TARGET_DIR = bucket.blob('all_years_npz/midi_npz')
+POS_WEIGHT = 50
+EPOCHS = 60

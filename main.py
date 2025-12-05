@@ -3,6 +3,13 @@ from piano_ai import extract_and_save_mel_features, midi_to_targets_chunks
 from piano_ai.loader import make_datasets
 from piano_ai.params import *
 
+
+from piano_ai.ml_logic.model import build_cnn_bilstm_onset_model          # ← supposé dans model.py
+from piano_ai.ml_logic.train import train_model          # ← supposé dans train.py
+from piano_ai.ml_logic.postprocessing import probs_to_onset_binary, probs_to_midi # ← ton postprocessing.py
+from piano_ai.params import *  # RAW_AUDIO_DIR, RAW_MIDI_DIR, OUT_DIR, CHUNK_SIZE, EPOCHS, etc.
+
+
 if __name__ == "__main__":
 
     ##############################
@@ -67,3 +74,63 @@ if __name__ == "__main__":
         print("velocity :", targets["velocity"].shape)
         print("pedal :", targets["pedal"].shape)
         break
+
+
+    #############################
+    # Step 5: Build the model
+    #############################
+    print("\n=== Step 4: Building the model ===")
+    # On récupère la shape d'entrée directement depuis un batch
+    example_mel, _ = next(iter(train_ds))
+    input_shape = example_mel.shape[1:]  # (T, 128), sans la dimension batch
+    # build_model est supposée être définie dans model.py
+    # ajuste la signature si besoin (par ex. build_model(input_shape, num_pitches=88))
+    model = build_cnn_bilstm_onset_model (input_shape=input_shape)
+    model.summary()
+
+
+    ############################
+    # Step 5: Train the model
+    #############################
+    print("\n=== Step 5: Training ===")
+    # Deux options :
+    #  1) tu as une fonction train_model dans train.py
+    #  2) tu entraînes directement ici avec model.fit
+    # OPTION 1 : train_model dans train.py
+    history = train_model(
+        model,
+        train_ds=train_ds,
+        val_ds=val_ds,
+        epochs=EPOCHS
+    )
+
+    #############################
+    # Step 6: Postprocessing demo
+    #############################
+    print("\n=== Step 6: Postprocessing (MIDI generation demo) ===")
+    # On prend un batch du set de test si dispo, sinon du val
+    if test_ds is not None:
+        source_ds = test_ds
+        print("Using test_ds for demo prediction.")
+    else:
+        source_ds = val_ds
+        print("No test_ds, using val_ds for demo prediction.")
+    mel_batch, onset_batch_true = next(iter(source_ds))
+
+    # Prédiction des probabilités d'onset
+    onset_pred = model.predict(mel_batch)[0]  # (T, 88) pour le premier sample
+
+    onset_binary = probs_to_onset_binary(onset_pred,threshold=0.50, min_distance=2)
+
+
+
+
+    # Conversion en MIDI via postprocessing.py
+    demo_midi_path = os.path.join(OUT_DIR, "demo_prediction.mid")
+    probs_to_midi(
+        onset_pred,
+        threshold=0.5,
+        min_distance=2,
+        output_path=demo_midi_path,
+    )
+    print("Demo MIDI saved at:", demo_midi_path)

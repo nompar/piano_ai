@@ -46,3 +46,5 @@ CHUNK_SIZE = 3000                   # How many frames per chunk when splitting d
 # where to save outputs, and how to split up the data for processing and training.
 
 BATCH_SIZE = 4
+POS_WEIGHT = 50
+EPOCHS = 60

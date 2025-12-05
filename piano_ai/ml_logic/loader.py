@@ -3,11 +3,12 @@ import os
 import glob
 import numpy as np
 import tensorflow as tf
+from google.cloud import storage
+from piano_ai.params import *
 
 # === CHEMINS PAR DÉFAUT (à adapter si besoin) ================================
-FEATURE_DIR = "/Users/hadriendecaumont/Downloads/all_years_npz_2/mel_npz"
-TARGET_DIR  = "/Users/hadriendecaumont/Downloads/all_years_npz_2/midi_npz"
-
+#    FEATURE_DIR = "/Users/hadriendecaumont/Downloads/all_years_npz_2/mel_npz"
+#    TARGET_DIR  = "/Users/hadriendecaumont/Downloads/all_years_npz_2/midi_npz"
 # ============================================================================
 
 def _build_pairs(feature_dir, target_dir):

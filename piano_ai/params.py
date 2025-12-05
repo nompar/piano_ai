@@ -45,4 +45,5 @@ CHUNK_SIZE = 3000                   # How many frames per chunk when splitting d
 # These are used throughout the pipeline to tell the code where to find input data,
 # where to save outputs, and how to split up the data for processing and training.
 
+POS_WEIGHT = 50
 BATCH_SIZE = 4

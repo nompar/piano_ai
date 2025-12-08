@@ -86,11 +86,12 @@ if __name__ == "__main__":
     #  1) tu as une fonction train_model dans train.py
     #  2) tu entraînes directement ici avec model.fit
     # OPTION 1 : train_model dans train.py
-    history = train_model(
+    history, model_path = train_model(
         model,
         train_ds=train_ds,
         val_ds=val_ds,
-        epochs=EPOCHS
+        epochs=EPOCHS,
+        save_dir=MODEL_DIR
     )
 
     #############################

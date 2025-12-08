@@ -17,14 +17,14 @@ ANNEE = os.environ.get("ANNEE")                    # Year or version identifier 
 READ_MODE = os.environ.get("READ_MODE")
 
 # Audio processing parameters:
-SR = 22050  # Sample rate: audio will be loaded at 22,050 samples per second
+SR = 22000  # Sample rate: audio will be loaded at 22,050 samples per second
 # Used whenever we load/process audio files (e.g., with librosa).
 
-FPS = 100   # Frames per second for spectrogram time resolution
-# Controls how finely we chop up the audio in time for spectrograms.
-
-HOP_LENGTH = SR // FPS  # Number of samples between successive frames (controls time resolution)
+HOP_LENGTH = 220  # Number of samples between successive frames (controls time resolution)
 # Used in spectrogram extraction to set the step size between frames.
+
+FPS = SR / HOP_LENGTH   # Frames per second for spectrogram time resolution
+# Controls how finely we chop up the audio in time for spectrograms.
 
 N_FFT = 2048    # Number of samples per FFT window (controls frequency resolution)
 # Used in spectrogram extraction to set the frequency resolution.
@@ -43,9 +43,8 @@ N_PITCHES = PITCH_MAX - PITCH_MIN + 1
 # ----------------------
 RAW_AUDIO_DIR = "./raw_data/small_2017"   # Local path to raw audio files
 RAW_MIDI_DIR = "./raw_data/small_2017"    # Local path to raw MIDI files
-FEATURE_DIR = "./small_2017_npz"
-TARGET_DIR = "./small_2017_target_npz"
 OUT_DIR_MIDI = "./small_y_pred_midi_2017"
+MODEL_DIR = f"{BUCKET_ID}/data_08_09_11_18/model"
 # Where to save processed data (features/labels)
 CHUNK_SIZE = 3000                   # How many frames per chunk when splitting data
 # These are used throughout the pipeline to tell the code where to find input data,
@@ -65,4 +64,4 @@ if READ_MODE == 'local':
 elif READ_MODE == 'gcp':
     # Use GCP bucket paths for training data (as strings, not Blob objects)
     FEATURE_DIR = f"{BUCKET_ID}/data_08_09_11_18/mel_npz"   # GCP mel-spectrograms
-    TARGET_DIR  = f"{BUCKET_ID}/data_08_09_11_18/midi_npz"  # GCP MIDI targets
+    TARGET_DIR  = f"{BUCKET_ID}/data_08_09_11_18/targets_npz"  # GCP MIDI targets

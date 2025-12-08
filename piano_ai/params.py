@@ -41,9 +41,12 @@ N_PITCHES = PITCH_MAX - PITCH_MIN + 1
 # ----------------------
 # Configuration paths
 # ----------------------
-RAW_AUDIO_DIR = "./raw_data/2017"   # Local path to raw audio files
-RAW_MIDI_DIR = "./raw_data/2017"    # Local path to raw MIDI files
-OUT_DIR = "./2017_npz"              # Where to save processed data (features/labels)
+RAW_AUDIO_DIR = "./raw_data/small_2017"   # Local path to raw audio files
+RAW_MIDI_DIR = "./raw_data/small_2017"    # Local path to raw MIDI files
+FEATURE_DIR = "./small_2017_npz"
+TARGET_DIR = "./small_2017_target_npz"
+OUT_DIR_MIDI = "./small_y_pred_midi_2017"
+# Where to save processed data (features/labels)
 CHUNK_SIZE = 3000                   # How many frames per chunk when splitting data
 # These are used throughout the pipeline to tell the code where to find input data,
 # where to save outputs, and how to split up the data for processing and training.
@@ -52,4 +55,14 @@ POS_WEIGHT = 50
 EPOCHS = 50
 BATCH_SIZE = 4
 POS_WEIGHT = 50
-EPOCHS = 60
+
+# --- Data source selection ---
+# This block sets the paths for feature and target data depending on where you want to load from
+if READ_MODE == 'local':
+    # Use local disk paths for training data
+    FEATURE_DIR = "./small_2017_npz"   # Local mel-spectrograms
+    TARGET_DIR = "./small_2017_target_npz"  # Local MIDI targets
+elif READ_MODE == 'gcp':
+    # Use GCP bucket paths for training data (as strings, not Blob objects)
+    FEATURE_DIR = f"{BUCKET_ID}/data_08_09_11_18/mel_npz"   # GCP mel-spectrograms
+    TARGET_DIR  = f"{BUCKET_ID}/data_08_09_11_18/midi_npz"  # GCP MIDI targets

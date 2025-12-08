@@ -12,7 +12,10 @@ from piano_ai.params import *
 # ============================================================================
 
 def _build_pairs(feature_dir, target_dir):
-    """Associe chaque mel à son npz de targets, en gérant le suffixe '_targets'."""
+    """
+    Find and pair up mel-spectrogram and MIDI target .npz files in local folders.
+    Returns lists of file paths for features and their matching targets.
+    """
     feature_paths = sorted(glob.glob(os.path.join(feature_dir, "*.npz")))
     target_paths  = sorted(glob.glob(os.path.join(target_dir, "*.npz")))
 
@@ -43,10 +46,10 @@ def _build_pairs(feature_dir, target_dir):
 
 def _load_arrays(paired_feature_paths, paired_target_paths):
     """
-    Charge tous les fichiers en mémoire.
-    Renvoie:
-        X : (N, T, 128)
-        Y : (N, T, 88)  (onset uniquement)
+    Load all paired .npz files into memory from local disk.
+    Returns:
+        X: (N, T, 128) - mel-spectrograms
+        Y: (N, T, 88)  - onset labels
     """
     mels = []
     onsets = []
@@ -74,7 +77,7 @@ def _load_arrays(paired_feature_paths, paired_target_paths):
 
 def _split_train_val_test(X, Y, val_ratio=0.1, test_ratio=0.1, seed=42):
     """
-    Mélange et split X, Y en train / val (/ test optionnel).
+    Shuffle and split X, Y into train / val / (optional) test sets.
     """
     N = len(X)
     rng = np.random.RandomState(seed)
@@ -108,14 +111,14 @@ def make_datasets(
     seed=42,
 ):
     """
-    Pipeline complet :
-      - pairage mel / targets
-      - chargement en mémoire
-      - split train / val (/ test)
-      - création de tf.data.Dataset
+    Complete pipeline for local data:
+      - Pair mel and target files
+      - Load them into memory
+      - Split into train/val/test
+      - Create TensorFlow datasets for training
 
-    Retourne:
-        train_ds, val_ds, test_ds (ou None si test_ratio=0)
+    Returns:
+        train_ds, val_ds, test_ds (or None if test_ratio=0)
     """
     # Pairage
     paired_feature_paths, paired_target_paths = _build_pairs(feature_dir, target_dir)
@@ -153,9 +156,113 @@ def make_datasets(
 
     return train_ds, val_ds, test_ds
 
+# -----------------------------------------------------------------------------
+# SECTION 2: LOADING DATA FROM GOOGLE CLOUD STORAGE (GCS)
+# -----------------------------------------------------------------------------
+# These functions are used when your data (.npz files) are stored in a Google Cloud
+# Storage bucket. This is useful for large datasets or when running code in the cloud.
+
+def _build_pairs_gcs(feature_dir, target_dir, fs=None):
+    """
+    Find and pair up mel-spectrogram and MIDI target .npz files in GCS buckets.
+    Returns lists of GCS file paths for features and their matching targets.
+    """
+    if fs is None:
+        fs = gcsfs.GCSFileSystem()  # Create a GCS filesystem object if not provided
+    feature_paths = sorted(fs.glob(f"{feature_dir}/*.npz"))  # List .npz files in GCS feature_dir
+    target_paths  = sorted(fs.glob(f"{target_dir}/*.npz"))   # List .npz files in GCS target_dir
+    feature_stems = [os.path.splitext(os.path.basename(p))[0] for p in feature_paths]
+    target_stems  = [os.path.splitext(os.path.basename(p))[0] for p in target_paths]
+    target_base_to_full = {stem.replace("_targets", ""): stem for stem in target_stems}
+    paired_feature_paths, paired_target_paths = [], []
+    for feat_path, feat_stem in zip(feature_paths, feature_stems):
+        if feat_stem in target_base_to_full:
+            tgt_stem = target_base_to_full[feat_stem]
+            tgt_path = f"{target_dir}/{tgt_stem}.npz"
+            paired_feature_paths.append(feat_path)
+            paired_target_paths.append(tgt_path)
+        else:
+            print("⚠️ No target found for", feat_stem)
+    print("Number of valid pairs:", len(paired_feature_paths))
+    return paired_feature_paths, paired_target_paths
+
+def _load_arrays_gcs(paired_feature_paths, paired_target_paths, fs=None):
+    """
+    Load all paired .npz files into memory from GCS.
+    Returns:
+        X: (N, T, 128) - mel-spectrograms
+        Y: (N, T, 88)  - onset labels
+    """
+    if fs is None:
+        fs = gcsfs.GCSFileSystem()  # Create a GCS filesystem object if not provided
+    mels, onsets = [], []           # Lists to store loaded mel and onset arrays
+    for feat_path, tgt_path in zip(paired_feature_paths, paired_target_paths):
+        with fs.open(feat_path, 'rb') as f:      # Open feature file from GCS
+            feat_npz = np.load(f)                # Load the .npz file as a numpy dict
+            mel = feat_npz["mel"]                # Extract the mel-spectrogram array
+        with fs.open(tgt_path, 'rb') as f:       # Open target file from GCS
+            tgt_npz = np.load(f)                 # Load the .npz file as a numpy dict
+            onset = tgt_npz["onset"]             # Extract the onset label array
+        mel = np.squeeze(mel, axis=-1).T         # Remove last dimension, transpose to (T, 128)
+        mels.append(mel.astype("float32"))       # Add to list, ensure float32 type
+        onsets.append(onset.astype("float32"))   # Add to list, ensure float32 type
+    X = np.stack(mels, axis=0)                   # Stack all mels into one array (N, T, 128)
+    Y = np.stack(onsets, axis=0)                 # Stack all onsets into one array (N, T, 88)
+    print("X:", X.shape)                         # Print shape for debugging
+    print("Y:", Y.shape)
+    return X, Y                                  # Return arrays
+
+def make_datasets_gcs(
+    feature_dir,
+    target_dir,
+    batch_size=4,
+    val_ratio=0.1,
+    test_ratio=0.1,
+    seed=42,
+):
+    """
+    Complete pipeline for GCS data:
+      - Pair mel and target files in GCS
+      - Load them into memory from GCS
+      - Split into train/val/test
+      - Create TensorFlow datasets for training
+
+    Returns:
+        train_ds, val_ds, test_ds (or None if test_ratio=0)
+    """
+    fs = gcsfs.GCSFileSystem()  # Create a GCS filesystem object
+    paired_feature_paths, paired_target_paths = _build_pairs_gcs(feature_dir, target_dir, fs)
+    X, Y = _load_arrays_gcs(paired_feature_paths, paired_target_paths, fs)
+    (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = _split_train_val_test(
+        X, Y, val_ratio=val_ratio, test_ratio=test_ratio, seed=seed
+    )
+    train_ds = (
+        tf.data.Dataset.from_tensor_slices((X_train, Y_train))
+        .shuffle(buffer_size=len(X_train), reshuffle_each_iteration=True)
+        .batch(batch_size)
+        .prefetch(tf.data.AUTOTUNE)
+    )
+    val_ds = (
+        tf.data.Dataset.from_tensor_slices((X_val, Y_val))
+        .batch(batch_size)
+        .prefetch(tf.data.AUTOTUNE)
+    )
+    test_ds = (
+        tf.data.Dataset.from_tensor_slices((X_test, Y_test))
+        .batch(batch_size)
+        .prefetch(tf.data.AUTOTUNE)
+    ) if len(X_test) > 0 else None
+    return train_ds, val_ds, test_ds
+
+
+
+
+# -----------------------------------------------------------------------------
+# SECTION 3: TESTING / DEMO
+# -----------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    # Petit test rapide quand tu exécutes `python loader.py`
+     # Example: Test local loading
     train_ds, val_ds, test_ds = make_datasets()
 
     for mel_batch, onset_batch in train_ds.take(1):
@@ -166,3 +273,8 @@ if __name__ == "__main__":
 
     for mel_batch, onset_batch in test_ds.take(1):
         print("test batch  :", mel_batch.shape, onset_batch.shape)
+
+
+    # To test GCS loading, call make_datasets_gcs(...) with your GCS paths
+    # Example:
+    # train_ds, val_ds, test_ds = make_datasets_gcs("piano_ai/all_years_npz/mel_npz", "piano_ai/all_years_npz/midi_npz")

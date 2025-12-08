@@ -215,7 +215,7 @@ def _load_arrays_gcs(paired_feature_paths, paired_target_paths, fs=None):
 def make_datasets_gcs(
     feature_dir,
     target_dir,
-    batch_size=4,
+    batch_size=BATCH_SIZE,
     val_ratio=0.1,
     test_ratio=0.1,
     seed=42,

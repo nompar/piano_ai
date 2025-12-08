@@ -1,5 +1,5 @@
 from tensorflow.keras import layers, models
-from params import *
+from piano_ai.params import *
 
 def build_cnn_bilstm_onset_model(
     n_mels=N_MELS,
@@ -9,7 +9,8 @@ def build_cnn_bilstm_onset_model(
     inputs = layers.Input(shape=(None, n_mels), name="mel_input")  # (T, 128)
 
     # Ajouter un canal pour Conv2D : (batch, T, 128, 1)
-    x = layers.Lambda(lambda t: tf.expand_dims(t, axis=-1))(inputs)
+    x = layers.Reshape((-1, N_MELS, 1))(inputs)
+
 
     # --- CNN trunk ---
     # On pool uniquement en fréquence pour garder la résolution temporelle T

@@ -1,13 +1,10 @@
 
 from piano_ai import extract_and_save_mel_features, midi_to_targets_chunks
-from piano_ai.loader import make_datasets
-from piano_ai.params import *
-
-
+from piano_ai.ml_logic.loader import make_datasets
 from piano_ai.ml_logic.model import build_cnn_bilstm_onset_model          # ← supposé dans model.py
 from piano_ai.ml_logic.train import train_model          # ← supposé dans train.py
 from piano_ai.ml_logic.postprocessing import probs_to_onset_binary, probs_to_midi # ← ton postprocessing.py
-from piano_ai.params import *  # RAW_AUDIO_DIR, RAW_MIDI_DIR, OUT_DIR, CHUNK_SIZE, EPOCHS, etc.
+from piano_ai.params import *  # RAW_AUDIO_DIR, RAW_MIDI_DIR, FEATURE_DIR, TARGET_DIR, CHUNK_SIZE, EPOCHS, etc.
 
 
 if __name__ == "__main__":
@@ -19,7 +16,7 @@ if __name__ == "__main__":
     # This function goes through all raw audio files, extracts mel spectrogram features,
     # splits them into chunks, and saves them for later use in model training.
 
-    extract_and_save_mel_features(RAW_AUDIO_DIR, OUT_DIR, chunk_size=CHUNK_SIZE)
+    extract_and_save_mel_features(RAW_AUDIO_DIR, FEATURE_DIR, chunk_size=CHUNK_SIZE)
 
     #############################
     # Step 2: MIDI preprocessing
@@ -28,8 +25,8 @@ if __name__ == "__main__":
     # This function processes the MIDI files, matches them to the audio chunks,
     # and creates training labels (onset, offset, velocity, etc.) for each chunk.
 
-    mel_chunks_dir = os.path.join(OUT_DIR, "mel_npz")
-    midi_to_targets_chunks(RAW_MIDI_DIR, mel_chunks_dir, OUT_DIR, chunk_size=CHUNK_SIZE)
+    mel_chunks_dir = os.path.join(FEATURE_DIR, "mel_npz")
+    midi_to_targets_chunks(RAW_MIDI_DIR, mel_chunks_dir, TARGET_DIR, chunk_size=CHUNK_SIZE)
 
     ##################################
     # Step 3: Build TensorFlow dataset
@@ -41,8 +38,8 @@ if __name__ == "__main__":
     print("\n=== Constructing TensorFlow datasets ===")
 
     train_ds, val_ds, test_ds = make_datasets(
-        feature_dir=os.path.join(OUT_DIR, "mel_npz"),
-        target_dir=os.path.join(OUT_DIR, "midi_npz"),
+        feature_dir=os.path.join(FEATURE_DIR, "mel_npz"),
+        target_dir=os.path.join(TARGET_DIR, "midi_npz"),
         batch_size=1,
         val_ratio=0.1,
         test_ratio=0.1,   # mets 0.0 si tu ne veux pas de test split
@@ -59,38 +56,30 @@ if __name__ == "__main__":
 
 
     #############################
-    # Step 4: Check the dataset
+    # Step 4: Check one batch
     #############################
-
-    # This loop loads one batch from the dataset and prints the shapes of the data
+    # This loads one batch from the dataset and prints the shapes of the data
     # to verify everything is working as expected.
 
-    for mel, targets in dataset:
-        print("\nBatch loaded ✔️")
-        print("mel :", mel.shape)
-        print("onset :", targets["onset"].shape)
-        print("offset :", targets["offset"].shape)
-        print("active :", targets["active"].shape)
-        print("velocity :", targets["velocity"].shape)
-        print("pedal :", targets["pedal"].shape)
-        break
+    mel, targets = next(iter(train_ds))
+    print("\nBatch loaded ✔️")
+    print("mel :", mel.shape)
+    print("onset :", targets.shape)
+
 
 
     #############################
     # Step 5: Build the model
     #############################
-    print("\n=== Step 4: Building the model ===")
-    # On récupère la shape d'entrée directement depuis un batch
-    example_mel, _ = next(iter(train_ds))
-    input_shape = example_mel.shape[1:]  # (T, 128), sans la dimension batch
-    # build_model est supposée être définie dans model.py
-    # ajuste la signature si besoin (par ex. build_model(input_shape, num_pitches=88))
-    model = build_cnn_bilstm_onset_model (input_shape=input_shape)
+    print("\n=== Step 5: Building the model ===")
+
+    # Appel direct sans input_shape, le modèle utilise N_MELS et N_PITCHES de params.py
+    model = build_cnn_bilstm_onset_model()
     model.summary()
 
 
     ############################
-    # Step 5: Train the model
+    # Step 6: Train the model
     #############################
     print("\n=== Step 5: Training ===")
     # Deux options :
@@ -105,7 +94,7 @@ if __name__ == "__main__":
     )
 
     #############################
-    # Step 6: Postprocessing demo
+    # Step 7: Postprocessing demo
     #############################
     print("\n=== Step 6: Postprocessing (MIDI generation demo) ===")
     # On prend un batch du set de test si dispo, sinon du val
@@ -126,7 +115,7 @@ if __name__ == "__main__":
 
 
     # Conversion en MIDI via postprocessing.py
-    demo_midi_path = os.path.join(OUT_DIR, "demo_prediction.mid")
+    demo_midi_path = os.path.join(OUT_DIR_MIDI, "demo_prediction.mid")
     probs_to_midi(
         onset_pred,
         threshold=0.5,

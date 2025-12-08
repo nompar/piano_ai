@@ -12,7 +12,7 @@ from .preprocess_audio import (
 )
 
 # Functions from loader.py
-from .loader import get_dataset
+from piano_ai.ml_logic.loader import make_datasets
 
 # Functions from binarizer
 from .binarizer import binarize_predictions

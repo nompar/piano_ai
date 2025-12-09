@@ -5,7 +5,7 @@ from piano_ai.ml_logic.model import build_cnn_bilstm_onset_model          # ← 
 from piano_ai.ml_logic.train import train_model          # ← supposé dans train.py
 from piano_ai.ml_logic.postprocessing import probs_to_onset_binary, probs_to_midi # ← ton postprocessing.py
 from piano_ai.params import *  # RAW_AUDIO_DIR, RAW_MIDI_DIR, FEATURE_DIR, TARGET_DIR, CHUNK_SIZE, EPOCHS, etc.
-
+from tqdm import tqdm
 
 if __name__ == "__main__":
 
@@ -123,6 +123,9 @@ if __name__ == "__main__":
 
     # Conversion en MIDI via postprocessing.py
     demo_midi_path = os.path.join(OUT_DIR_MIDI, "demo_prediction.mid")
+
+    os.makedirs(OUT_DIR_MIDI, exist_ok=True)
+
     probs_to_midi(
         onset_pred,
         threshold=0.5,

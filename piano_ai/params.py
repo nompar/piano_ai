@@ -41,11 +41,11 @@ N_PITCHES = PITCH_MAX - PITCH_MIN + 1
 # ----------------------
 # Configuration paths
 # ----------------------
-RAW_AUDIO_DIR = "./raw_data/small_2017"   # Local path to raw audio files
-RAW_MIDI_DIR = "./raw_data/small_2017"    # Local path to raw MIDI files
+RAW_AUDIO_DIR = "./small_2017"   # Local path to raw audio files
+RAW_MIDI_DIR = "./small_2017"    # Local path to raw MIDI files
 OUT_DIR_MIDI = "./small_y_pred_midi_2017"
 MODEL_DIR = f"{BUCKET_ID}/data_08_09_11_18/model"
-DATASET_DIR = f"{BUCKET_ID}/data_08_09_11_18/dataset"
+
 
 # Where to save processed data (features/labels)
 CHUNK_SIZE = 3000                   # How many frames per chunk when splitting data
@@ -53,7 +53,7 @@ CHUNK_SIZE = 3000                   # How many frames per chunk when splitting d
 # where to save outputs, and how to split up the data for processing and training.
 
 POS_WEIGHT = 50
-EPOCHS = 50
+EPOCHS = 5
 BATCH_SIZE = 16
 POS_WEIGHT = 50
 
@@ -61,9 +61,14 @@ POS_WEIGHT = 50
 # This block sets the paths for feature and target data depending on where you want to load from
 if READ_MODE == 'local':
     # Use local disk paths for training data
-    FEATURE_DIR = "./small_2017_npz"   # Local mel-spectrograms
-    TARGET_DIR = "./small_2017_target_npz"  # Local MIDI targets
+    FEATURE_DIR = "./small_2017_npz/"   # Local mel-spectrograms
+    TARGET_DIR = "./small_2017_target_npz/"  # Local MIDI targets
+    DATASET_DIR = "/dataset_tensorflow"
+    MODEL_DIR = "./model_savings"
 elif READ_MODE == 'gcp':
     # Use GCP bucket paths for training data (as strings, not Blob objects)
-    FEATURE_DIR = "piano_ai/data_08_09_11_18/"   # GCP mel-spectrograms
-    TARGET_DIR  = "piano_ai/data_08_09_11_18/"  # GCP MIDI targets
+    FEATURE_DIR = "piano_ai/data_08_09_11_18/"
+    TARGET_DIR  = "piano_ai/data_08_09_11_18/" # GCP MIDI targets
+    DATASET_DIR = "./dataset_tensorflow"
+    MODEL_DIR = "./model_savings"
+    OUT_DIR_MIDI = "./small_y_pred_midi_2017"

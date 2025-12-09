@@ -46,6 +46,7 @@ Interface web permettant :
 - Utilisation de gcsfs + google.cloud.storage
 
 ## 📂 Structure du projet
+```
 piano_ai/
 │
 ├── ml_logic/
@@ -63,7 +64,7 @@ piano_ai/
 ├── api.py                      # API FastAPI : endpoint /convert
 ├── README.md                   # Documentation du projet
 └── requirements.txt            # Dépendances Python
-
+```
 ###############################################################################
 END
 ###############################################################################

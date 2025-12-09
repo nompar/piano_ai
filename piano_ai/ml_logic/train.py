@@ -73,10 +73,15 @@ def train_model(model, train_ds, val_ds, epochs=EPOCHS, save_dir="model"):
         callbacks=callbacks,
     )
 
+
+
     # ===== SAUVEGARDE FINALE =====
     model_path = os.path.join(save_dir, "model.keras")
     model.save(model_path)
     print(f"✅ Modèle sauvegardé: {model_path}")
+
+
+
 
     # Sauvegarde aussi les poids seuls (backup)
     weights_path = os.path.join(save_dir, "weights.h5")

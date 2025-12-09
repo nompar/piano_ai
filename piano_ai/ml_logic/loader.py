@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 from google.cloud import storage
 from piano_ai.params import *
+import gcsfs
 
 # === CHEMINS PAR DÉFAUT (à adapter si besoin) ================================
 #    FEATURE_DIR = "/Users/hadriendecaumont/Downloads/all_years_npz_2/mel_npz"
@@ -111,50 +112,54 @@ def make_datasets(
     seed=42,
 ):
     """
-    Complete pipeline for local data:
-      - Pair mel and target files
-      - Load them into memory
-      - Split into train/val/test
-      - Create TensorFlow datasets for training
-
-    Returns:
-        train_ds, val_ds, test_ds (or None if test_ratio=0)
+    Fonction intelligente qui choisit la bonne méthode (Local vs GCP)
+    en fonction du chemin fourni.
     """
-    # Pairage
-    paired_feature_paths, paired_target_paths = _build_pairs(feature_dir, target_dir)
-
-    # Chargement en X, Y
-    X, Y = _load_arrays(paired_feature_paths, paired_target_paths)
-
-    # Split
-    (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = _split_train_val_test(
-        X, Y, val_ratio=val_ratio, test_ratio=test_ratio, seed=seed
-    )
-
-    # Création des datasets tf.data
-    train_ds = (
-        tf.data.Dataset.from_tensor_slices((X_train, Y_train))
-        .shuffle(buffer_size=len(X_train), reshuffle_each_iteration=True)
-        .batch(batch_size)
-        .prefetch(tf.data.AUTOTUNE)
-    )
-
-    val_ds = (
-        tf.data.Dataset.from_tensor_slices((X_val, Y_val))
-        .batch(batch_size)
-        .prefetch(tf.data.AUTOTUNE)
-    )
-
-    if len(X_test) > 0:
-        test_ds = (
-            tf.data.Dataset.from_tensor_slices((X_test, Y_test))
+    # DÉTECTION AUTOMATIQUE GCP vs LOCAL
+    # Si le chemin commence par "gs://", on bascule sur le mode Cloud
+    if READ_MODE == 'gcp':
+        print(f":nuage: Détection de chemin GCP : {feature_dir}")
+        return make_datasets_gcs(
+            feature_dir,
+            target_dir,
+            batch_size,
+            val_ratio,
+            test_ratio,
+            seed
+        )
+    else:
+        # Sinon, on reste sur le comportement local classique
+        print(f":ordinateur: Détection de chemin Local : {feature_dir}")
+        # --- TON ANCIEN CODE LOCAL ---
+        # Pairage
+        paired_feature_paths, paired_target_paths = _build_pairs(feature_dir, target_dir)
+        # Chargement en X, Y
+        X, Y = _load_arrays(paired_feature_paths, paired_target_paths)
+        # Split
+        (X_train, Y_train), (X_val, Y_val), (X_test, Y_test) = _split_train_val_test(
+            X, Y, val_ratio=val_ratio, test_ratio=test_ratio, seed=seed
+        )
+        # Création des datasets tf.data
+        train_ds = (
+            tf.data.Dataset.from_tensor_slices((X_train, Y_train))
+            .shuffle(buffer_size=len(X_train), reshuffle_each_iteration=True)
             .batch(batch_size)
             .prefetch(tf.data.AUTOTUNE)
         )
-    else:
-        test_ds = None
-
-    return train_ds, val_ds, test_ds
+        val_ds = (
+            tf.data.Dataset.from_tensor_slices((X_val, Y_val))
+            .batch(batch_size)
+            .prefetch(tf.data.AUTOTUNE)
+        )
+        if len(X_test) > 0:
+            test_ds = (
+                tf.data.Dataset.from_tensor_slices((X_test, Y_test))
+                .batch(batch_size)
+                .prefetch(tf.data.AUTOTUNE)
+            )
+        else:
+            test_ds = None
+        return train_ds, val_ds, test_ds
 
 # -----------------------------------------------------------------------------
 # SECTION 2: LOADING DATA FROM GOOGLE CLOUD STORAGE (GCS)
@@ -186,31 +191,35 @@ def _build_pairs_gcs(feature_dir, target_dir, fs=None):
     print("Number of valid pairs:", len(paired_feature_paths))
     return paired_feature_paths, paired_target_paths
 
+from tqdm import tqdm
+
 def _load_arrays_gcs(paired_feature_paths, paired_target_paths, fs=None):
-    """
-    Load all paired .npz files into memory from GCS.
-    Returns:
-        X: (N, T, 128) - mel-spectrograms
-        Y: (N, T, 88)  - onset labels
-    """
     if fs is None:
-        fs = gcsfs.GCSFileSystem()  # Create a GCS filesystem object if not provided
-    mels, onsets = [], []           # Lists to store loaded mel and onset arrays
-    for feat_path, tgt_path in zip(paired_feature_paths, paired_target_paths):
-        with fs.open(feat_path, 'rb') as f:      # Open feature file from GCS
-            feat_npz = np.load(f)                # Load the .npz file as a numpy dict
-            mel = feat_npz["mel"]                # Extract the mel-spectrogram array
-        with fs.open(tgt_path, 'rb') as f:       # Open target file from GCS
-            tgt_npz = np.load(f)                 # Load the .npz file as a numpy dict
-            onset = tgt_npz["onset"]             # Extract the onset label array
-        mel = np.squeeze(mel, axis=-1).T         # Remove last dimension, transpose to (T, 128)
-        mels.append(mel.astype("float32"))       # Add to list, ensure float32 type
-        onsets.append(onset.astype("float32"))   # Add to list, ensure float32 type
-    X = np.stack(mels, axis=0)                   # Stack all mels into one array (N, T, 128)
-    Y = np.stack(onsets, axis=0)                 # Stack all onsets into one array (N, T, 88)
-    print("X:", X.shape)                         # Print shape for debugging
+        fs = gcsfs.GCSFileSystem()
+    mels, onsets = [], []
+
+    print(f"⏳ Chargement GCS des {len(paired_feature_paths)} paires...")
+    for feat_path, tgt_path in tqdm(zip(paired_feature_paths, paired_target_paths),
+                                   total=len(paired_feature_paths),
+                                   desc="Lecture NPZ GCS"):
+        with fs.open(feat_path, 'rb') as f:
+            feat_npz = np.load(f)
+            mel = feat_npz["mel"]
+
+        with fs.open(tgt_path, 'rb') as f:
+            tgt_npz = np.load(f)
+            onset = tgt_npz["onset"]
+
+        mel = np.squeeze(mel, axis=-1).T
+        mels.append(mel.astype("float32"))
+        onsets.append(onset.astype("float32"))
+
+    X = np.stack(mels, axis=0)
+    Y = np.stack(onsets, axis=0)
+    print("X:", X.shape)
     print("Y:", Y.shape)
-    return X, Y                                  # Return arrays
+    return X, Y
+
 
 def make_datasets_gcs(
     feature_dir,
@@ -252,6 +261,12 @@ def make_datasets_gcs(
         .batch(batch_size)
         .prefetch(tf.data.AUTOTUNE)
     ) if len(X_test) > 0 else None
+    with fs.open(os.path.join(DATASET_DIR,"train"),"wb") as f:
+        f.write(train_ds)
+    with fs.open(os.path.join(DATASET_DIR,"val"),"wb") as f:
+        f.write(val_ds)
+    with fs.open(os.path.join(DATASET_DIR,"test"),"wb") as f:
+        f.write(test_ds)
     return train_ds, val_ds, test_ds
 
 

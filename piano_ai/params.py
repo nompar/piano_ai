@@ -45,6 +45,8 @@ RAW_AUDIO_DIR = "./raw_data/small_2017"   # Local path to raw audio files
 RAW_MIDI_DIR = "./raw_data/small_2017"    # Local path to raw MIDI files
 OUT_DIR_MIDI = "./small_y_pred_midi_2017"
 MODEL_DIR = f"{BUCKET_ID}/data_08_09_11_18/model"
+DATASET_DIR = f"{BUCKET_ID}/data_08_09_11_18/dataset"
+
 # Where to save processed data (features/labels)
 CHUNK_SIZE = 3000                   # How many frames per chunk when splitting data
 # These are used throughout the pipeline to tell the code where to find input data,
@@ -63,5 +65,5 @@ if READ_MODE == 'local':
     TARGET_DIR = "./small_2017_target_npz"  # Local MIDI targets
 elif READ_MODE == 'gcp':
     # Use GCP bucket paths for training data (as strings, not Blob objects)
-    FEATURE_DIR = f"{BUCKET_ID}/data_08_09_11_18/mel_npz"   # GCP mel-spectrograms
-    TARGET_DIR  = f"{BUCKET_ID}/data_08_09_11_18/targets_npz"  # GCP MIDI targets
+    FEATURE_DIR = "piano_ai/data_08_09_11_18/"   # GCP mel-spectrograms
+    TARGET_DIR  = "piano_ai/data_08_09_11_18/"  # GCP MIDI targets

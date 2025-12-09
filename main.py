@@ -39,11 +39,17 @@ if __name__ == "__main__":
 
     train_ds, val_ds, test_ds = make_datasets(
         feature_dir=os.path.join(FEATURE_DIR, "mel_npz"),
-        target_dir=os.path.join(TARGET_DIR, "midi_npz"),
+        target_dir=os.path.join(TARGET_DIR, "targets_npz"),
         batch_size=1,
         val_ratio=0.1,
         test_ratio=0.1,   # mets 0.0 si tu ne veux pas de test split
         )
+
+
+    # Barre de progression sur train_ds
+    print("\n=== Loading preview of train_ds ===")
+    for batch in tqdm(train_ds.take(300), desc="train_ds", ncols=90):
+        pass
 
     print(f"Train batches: {len(list(train_ds))}")
     print(f"Val batches:   {len(list(val_ds))}")

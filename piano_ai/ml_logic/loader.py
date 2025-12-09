@@ -17,6 +17,7 @@ def _build_pairs(feature_dir, target_dir):
     Find and pair up mel-spectrogram and MIDI target .npz files in local folders.
     Returns lists of file paths for features and their matching targets.
     """
+
     feature_paths = sorted(glob.glob(os.path.join(feature_dir, "*.npz")))
     target_paths  = sorted(glob.glob(os.path.join(target_dir, "*.npz")))
 
@@ -57,6 +58,7 @@ def _load_arrays(paired_feature_paths, paired_target_paths):
 
     for feat_path, tgt_path in zip(paired_feature_paths, paired_target_paths):
         feat_npz = np.load(feat_path)
+
         tgt_npz  = np.load(tgt_path)
 
         mel   = feat_npz["mel"]      # (128, 3000, 1) typiquement
@@ -132,6 +134,7 @@ def make_datasets(
         print(f":ordinateur: Détection de chemin Local : {feature_dir}")
         # --- TON ANCIEN CODE LOCAL ---
         # Pairage
+
         paired_feature_paths, paired_target_paths = _build_pairs(feature_dir, target_dir)
         # Chargement en X, Y
         X, Y = _load_arrays(paired_feature_paths, paired_target_paths)
@@ -159,7 +162,13 @@ def make_datasets(
             )
         else:
             test_ds = None
+
+        train_ds.save("./train_ds")
+        val_ds.save("./val_ds")
+        test_ds.save("./test_ds")
+
         return train_ds, val_ds, test_ds
+
 
 # -----------------------------------------------------------------------------
 # SECTION 2: LOADING DATA FROM GOOGLE CLOUD STORAGE (GCS)
